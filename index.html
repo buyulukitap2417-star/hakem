@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Hakem | SDÜ Oryantiring</title>
+    <title>Hakem Sahası | SDÜ Oryantiring</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -12,35 +12,31 @@
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;700;800&display=swap');
         body { font-family: 'Plus Jakarta Sans', sans-serif; background: #020617; color: white; overflow-x: hidden; }
         .glass { background: rgba(255, 255, 255, 0.02); backdrop-filter: blur(15px); border: 1px solid rgba(255, 255, 255, 0.1); }
-        .btn-active { background: #ef4444 !important; animation: pulse 1.5s infinite; }
+        .mic-on { background: #ef4444 !important; animation: pulse 1.5s infinite; }
         @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
     </style>
 </head>
 <body class="p-6">
-
-    <!-- GİRİŞ -->
     <div id="loginUI" class="fixed inset-0 z-[300] flex items-center justify-center bg-slate-950 px-6">
         <div class="max-w-md w-full glass p-10 rounded-[3rem] border-t-4 border-emerald-500 shadow-2xl text-center">
             <h1 class="text-2xl font-black uppercase mb-8">HAKEM GİRİŞİ</h1>
-            <input type="text" id="refCode" placeholder="HAKEM KODU" class="w-full bg-black/40 border border-white/10 rounded-2xl py-4 text-center text-xl font-bold outline-none uppercase text-emerald-500 mb-6 focus:border-emerald-500">
-            <button onclick="login()" class="w-full py-5 bg-emerald-600 text-white rounded-2xl font-black uppercase tracking-widest">SİSTEME GİRİŞ</button>
+            <input type="text" id="refCode" placeholder="GİRİŞ KODU" class="w-full bg-black/40 border border-white/10 rounded-2xl py-4 text-center text-xl font-bold outline-none uppercase text-emerald-500 mb-6 focus:border-emerald-500">
+            <button onclick="login()" class="w-full py-5 bg-emerald-600 text-white rounded-2xl font-black uppercase tracking-widest shadow-lg">SİSTEME GİR</button>
         </div>
     </div>
 
-    <!-- PANEL -->
     <div id="dashUI" class="hidden space-y-6">
-        <header class="flex justify-between items-center">
-            <div><h2 id="refN" class="text-lg font-black uppercase">---</h2><p class="text-[10px] text-emerald-500 font-bold tracking-widest uppercase">GÖREVLİ HAKEM</p></div>
-            <button onclick="logout()" class="p-3 glass rounded-xl text-red-500"><i data-lucide="log-out"></i></button>
+        <header class="flex justify-between items-center glass p-5 rounded-3xl">
+            <div><h2 id="refN" class="text-sm font-black uppercase">---</h2><p class="text-[9px] text-emerald-500 font-bold tracking-widest uppercase">GÖREVLİ HAKEM</p></div>
+            <button onclick="logout()" class="p-3 bg-red-500/10 text-red-500 rounded-xl"><i data-lucide="log-out"></i></button>
         </header>
 
-        <div class="grid gap-4" id="teamList"></div>
+        <div id="teamList" class="space-y-3"></div>
     </div>
 
-    <!-- SES KONTROLLERİ -->
     <div id="voiceUI" class="hidden fixed bottom-6 right-6 flex flex-col gap-3">
-        <button id="spkBtn" onclick="toggleSpk()" class="p-5 glass rounded-2xl border-2 border-white/10"><i data-lucide="volume-x" id="spkIcon"></i></button>
-        <button id="micBtn" onclick="toggleMic()" class="p-5 glass rounded-2xl border-2 border-white/10"><i data-lucide="mic-off" id="micIcon"></i></button>
+        <button id="spkBtn" onclick="toggleSpk()" class="p-5 glass rounded-2xl border-2 border-white/10 shadow-2xl"><i data-lucide="volume-x" id="spkIcon"></i></button>
+        <button id="micBtn" onclick="toggleMic()" class="p-5 glass rounded-2xl border-2 border-white/10 shadow-2xl"><i data-lucide="mic-off" id="micIcon"></i></button>
     </div>
 
     <audio id="remoteAudio" autoplay class="hidden"></audio>
@@ -62,24 +58,27 @@
                 document.getElementById('dashUI').classList.remove('hidden');
                 document.getElementById('voiceUI').classList.remove('hidden');
                 fetchTeams(); startVoice(); startGPS();
-            } else alert("Hatalı Hakem Kodu!");
+            } else alert("Hatalı Kod!");
         }
 
         async function fetchTeams() {
             const { data } = await supabaseClient.from('registrations').select('*').order('team_name');
+            const { data: reports } = await supabaseClient.from('referee_reports').select('team_id').eq('referee_id', ref.id);
+            const reportedIds = reports?.map(r => r.team_id) || [];
+
             const list = document.getElementById('teamList');
             list.innerHTML = data.map(t => `
-                <div class="glass p-5 rounded-[2rem] flex justify-between items-center">
-                    <div><h4 class="font-black text-sm uppercase">${t.team_name}</h4><p class="text-[9px] text-slate-500 font-bold uppercase mt-1">Kod: ${t.team_code || '---'}</p></div>
-                    <button onclick="report('${t.id}')" class="px-5 py-3 bg-emerald-600/20 text-emerald-500 rounded-xl font-bold text-[10px] uppercase">Raporla</button>
+                <div class="glass p-5 rounded-[2rem] flex justify-between items-center ${reportedIds.includes(t.id)?'opacity-50 border-emerald-500/30':''}">
+                    <div><h4 class="font-black text-sm uppercase">${t.team_name}</h4><p class="text-[9px] text-slate-500 font-bold uppercase mt-1">Süre: ${t.is_timer_running?'Aktif':'Beklemede'}</p></div>
+                    ${reportedIds.includes(t.id) ? `<span class="text-emerald-500 text-[9px] font-black uppercase">VARDI</span>` : `<button onclick="report('${t.id}')" class="px-5 py-3 bg-emerald-600/20 text-emerald-500 rounded-xl font-black text-[10px] uppercase">GELDİ</button>`}
                 </div>
             `).join('');
         }
 
         async function report(teamId) {
-            const notes = prompt("Notunuz (Opsiyonel):");
+            const notes = prompt("Ekstra notunuz (Hatalı çözüm, geç varış vb):");
             await supabaseClient.from('referee_reports').insert({ referee_id: ref.id, team_id: teamId, arrived: true, notes: notes });
-            alert("Takım varışı merkeze iletildi.");
+            fetchTeams();
         }
 
         function startGPS() {
@@ -102,7 +101,7 @@
         function toggleMic() { if(!myStream) return; micOn = !micOn; myStream.getAudioTracks()[0].enabled = micOn; upUI(); }
         function toggleSpk() { spkOn = !spkOn; document.getElementById('remoteAudio').muted = !spkOn; upUI(); }
         function upUI() {
-            document.getElementById('micBtn').className = micOn ? "p-5 glass rounded-2xl border-2 border-red-500 btn-active" : "p-5 glass rounded-2xl border-2 border-white/10";
+            document.getElementById('micBtn').className = micOn ? "p-5 glass rounded-2xl border-2 border-red-500 mic-on" : "p-5 glass rounded-2xl border-2 border-white/10";
             document.getElementById('micIcon').setAttribute('data-lucide', micOn ? 'mic' : 'mic-off');
             document.getElementById('spkBtn').className = spkOn ? "p-5 glass rounded-2xl border-2 border-blue-500" : "p-5 glass rounded-2xl border-2 border-white/10";
             document.getElementById('spkIcon').setAttribute('data-lucide', spkOn ? 'volume-2' : 'volume-x');
