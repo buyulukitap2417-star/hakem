@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Hakem | SDÜ Oryantiring</title>
+    <title>Hakem Sahası | SDÜ Oryantiring</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -12,26 +12,27 @@
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;700;800&display=swap');
         body { font-family: 'Plus Jakarta Sans', sans-serif; background: #020617; color: white; overflow-x: hidden; }
         .glass { background: rgba(255, 255, 255, 0.02); backdrop-filter: blur(15px); border: 1px solid rgba(255, 255, 255, 0.1); }
-        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 500; display: none; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(10px); }
+        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 500; display: none; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(10px); }
         .modal.active { display: flex; }
-        .mic-on { background: #ef4444 !important; animation: pulse 1.5s infinite; }
+        .mic-on { background: #ef4444 !important; animation: pulse 1.5s infinite; border-color: #ef4444 !important; }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
     </style>
 </head>
-<body class="p-6 text-center">
+<body class="p-6">
 
     <audio id="remoteAudio" autoplay class="hidden"></audio>
 
     <div id="loginUI" class="fixed inset-0 z-[300] flex items-center justify-center bg-slate-950 px-6">
-        <div class="max-w-md w-full glass p-10 rounded-[3rem] border-t-4 border-emerald-500 shadow-2xl">
+        <div class="max-w-md w-full glass p-10 rounded-[3rem] border-t-4 border-emerald-500 text-center shadow-2xl">
             <h1 class="text-2xl font-black uppercase mb-8">HAKEM GİRİŞİ</h1>
-            <input type="text" id="refCode" placeholder="HAKEM KODU" class="w-full bg-black/40 border border-white/10 rounded-2xl py-5 px-6 text-center text-xl font-bold outline-none uppercase text-emerald-500 mb-6 focus:border-emerald-500">
-            <button onclick="login()" class="w-full py-5 bg-emerald-600 text-white rounded-2xl font-black uppercase shadow-lg">BAĞLAN</button>
+            <input type="text" id="refCode" placeholder="GİRİŞ KODU" class="w-full bg-black/40 border border-white/10 rounded-2xl py-4 text-center text-xl font-bold outline-none uppercase text-emerald-500 mb-6 focus:border-emerald-500">
+            <button onclick="login()" class="w-full py-5 bg-emerald-600 text-white rounded-2xl font-black uppercase tracking-widest shadow-lg">BAĞLAN</button>
         </div>
     </div>
 
-    <div id="dashUI" class="hidden space-y-6 pb-24 text-left">
-        <header class="flex justify-between items-center glass p-5 rounded-3xl border border-white/10">
-            <div><h2 id="refN" class="text-sm font-black uppercase">---</h2><p class="text-[9px] text-emerald-500 font-bold uppercase">GÖREVLİ HAKEM</p></div>
+    <div id="dashUI" class="hidden space-y-6">
+        <header class="flex justify-between items-center glass p-5 rounded-3xl">
+            <div><h2 id="refN" class="text-sm font-black uppercase">---</h2><p class="text-[9px] text-emerald-500 font-bold uppercase tracking-widest">SAHA HAKEMİ</p></div>
             <button onclick="logout()" class="p-3 bg-red-500/10 text-red-500 rounded-xl"><i data-lucide="log-out"></i></button>
         </header>
         <div id="teamList" class="space-y-3"></div>
@@ -39,19 +40,19 @@
 
     <div id="reportModal" class="modal">
         <div class="glass w-full max-w-md p-8 rounded-[3rem] border-t-4 border-emerald-500 shadow-3xl space-y-6">
-            <h3 id="targetTeam" class="text-xl font-black uppercase text-center">---</h3>
+            <h3 id="targetTeam" class="text-xl font-black uppercase text-center tracking-tighter text-white">---</h3>
             <div class="space-y-4">
-                <div class="flex items-center justify-between p-4 glass rounded-2xl"><span>Takım Vardı mı?</span><input type="checkbox" id="checkArrived" class="w-6 h-6 accent-emerald-500"></div>
-                <div class="flex items-center justify-between p-4 glass rounded-2xl"><span>Görev Başarılı mı?</span><input type="checkbox" id="checkSuccess" class="w-6 h-6 accent-emerald-500"></div>
-                <textarea id="reportNote" placeholder="Hakem notları..." class="w-full h-28 bg-black/40 border border-white/10 rounded-2xl p-4 text-sm outline-none focus:border-emerald-500 text-white"></textarea>
+                <div class="flex items-center justify-between p-4 glass rounded-2xl text-white"><span>Takım Vardı mı?</span><input type="checkbox" id="checkArrived" class="w-6 h-6 accent-emerald-500"></div>
+                <div class="flex items-center justify-between p-4 glass rounded-2xl text-white"><span>Görev Başarılı mı?</span><input type="checkbox" id="checkSuccess" class="w-6 h-6 accent-emerald-500"></div>
+                <textarea id="reportNote" placeholder="Notlar..." class="w-full h-28 bg-black/40 border border-white/10 rounded-2xl p-4 text-sm outline-none focus:border-emerald-500 text-white"></textarea>
             </div>
-            <div class="flex gap-3"><button onclick="closeReport()" class="flex-1 py-4 glass rounded-2xl font-bold uppercase text-xs">VAZGEÇ</button><button onclick="submitReport()" class="flex-1 py-4 bg-emerald-600 text-white rounded-2xl font-black uppercase text-xs">GÖNDER</button></div>
+            <div class="flex gap-3"><button onclick="closeReport()" class="flex-1 py-4 glass rounded-2xl font-bold uppercase text-xs text-white">VAZGEÇ</button><button onclick="submitReport()" class="flex-1 py-4 bg-emerald-600 text-white rounded-2xl font-black uppercase text-xs shadow-lg">GÖNDER</button></div>
         </div>
     </div>
 
     <div id="voiceUI" class="hidden fixed bottom-6 right-6 flex flex-col gap-3">
-        <button id="spkBtn" onclick="toggleSpk()" class="p-5 glass rounded-[1.5rem] border-2 border-white/10 shadow-3xl"><i data-lucide="volume-x" id="spkIcon"></i></button>
-        <button id="micBtn" onclick="toggleMic()" class="p-5 glass rounded-[1.5rem] border-2 border-white/10 shadow-3xl"><i data-lucide="mic-off" id="micIcon"></i></button>
+        <button id="spkBtn" onclick="toggleSpk()" class="p-5 glass rounded-2xl border-2 border-white/10 shadow-2xl"><i data-lucide="volume-x" id="spkIcon" class="text-white"></i></button>
+        <button id="micBtn" onclick="toggleMic()" class="p-5 glass rounded-2xl border-2 border-white/10 shadow-2xl"><i data-lucide="mic-off" id="micIcon" class="text-white"></i></button>
     </div>
 
     <script>
@@ -71,6 +72,22 @@
                 fetchTeams(); startVoice(); startGPS();
             } else alert("Hatalı Kod!");
         }
+
+        async function fetchTeams() {
+            const { data } = await supabaseClient.from('registrations').select('*').order('team_name');
+            const list = document.getElementById('teamList');
+            list.innerHTML = data.map(t => `<div class="glass p-5 rounded-[2rem] flex justify-between items-center" onclick="openReport('${t.id}','${t.team_name}')"><div><h4 class="font-black text-sm uppercase">${t.team_name}</h4><p class="text-[9px] text-slate-500 uppercase mt-1">SÜRE: ${t.is_timer_running?'AKTİF':'DURDU'}</p></div><div class="p-3 bg-emerald-500/10 rounded-xl"><i data-lucide="file-edit" class="w-4 h-4 text-emerald-500"></i></div></div>`).join('');
+            lucide.createIcons();
+        }
+
+        function openReport(id, name) { selectedId = id; document.getElementById('targetTeam').innerText = name; document.getElementById('reportModal').classList.add('active'); }
+        function closeReport() { document.getElementById('reportModal').classList.remove('active'); }
+        async function submitReport() {
+            const up = { referee_id: ref.id, team_id: selectedId, arrived: document.getElementById('checkArrived').checked, success: document.getElementById('checkSuccess').checked, notes: document.getElementById('reportNote').value };
+            await supabaseClient.from('referee_reports').insert(up); alert("İletildi!"); closeReport(); fetchTeams();
+        }
+
+        function startGPS() { navigator.geolocation.watchPosition(async (pos) => { await supabaseClient.from('referees').update({last_lat:pos.coords.latitude, last_lng:pos.coords.longitude}).eq('id',ref.id); }, null, {enableHighAccuracy: true}); }
 
         async function startVoice() {
             if (peer) peer.destroy();
@@ -98,13 +115,7 @@
             document.getElementById('spkIcon').setAttribute('data-lucide', spkOn ? 'volume-2' : 'volume-x');
             lucide.createIcons();
         }
-
-        function fetchTeams() { /* Same as before */ }
-        function openReport(id, name) { selectedId = id; document.getElementById('targetTeam').innerText = name; document.getElementById('reportModal').classList.add('active'); }
-        function closeReport() { document.getElementById('reportModal').classList.remove('active'); }
-        async function submitReport() { /* Same as before */ }
         function logout() { localStorage.removeItem('sdu_ref_code'); location.reload(); }
-        function startGPS() { navigator.geolocation.watchPosition(async (pos) => { await supabaseClient.from('referees').update({last_lat:pos.coords.latitude, last_lng:pos.coords.longitude}).eq('id',ref.id); }, null, {enableHighAccuracy: true}); }
         window.onload = () => { if(localStorage.getItem('sdu_ref_code')) { document.getElementById('refCode').value = localStorage.getItem('sdu_ref_code'); login(); } lucide.createIcons(); };
     </script>
 </body>
