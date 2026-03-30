@@ -19,16 +19,14 @@
         @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
     </style>
 </head>
-<body class="p-6">
+<body class="p-6 text-center">
 
     <audio id="remoteAudio" autoplay class="hidden"></audio>
 
-    <!-- ORİJİNAL GİRİŞ EKRANI (Ekstra buton kaldırıldı) -->
     <div id="loginUI" class="fixed inset-0 z-[300] flex items-center justify-center bg-slate-950 px-6 text-white text-center">
         <div class="max-w-md w-full glass p-10 rounded-[3rem] border-t-4 border-emerald-500 shadow-2xl">
             <h1 class="text-2xl font-black uppercase mb-8 tracking-tighter">HAKEM GİRİŞİ</h1>
             <input type="text" id="refCode" placeholder="GİRİŞ KODU" class="w-full bg-black/40 border border-white/10 rounded-2xl py-5 px-6 text-center text-xl font-bold outline-none uppercase text-emerald-500 mb-6 focus:border-emerald-500 transition-all">
-            <!-- Butona basılması ses iznini almak için yeterlidir -->
             <button onclick="login()" class="w-full py-5 bg-emerald-600 text-white rounded-2xl font-black uppercase tracking-widest shadow-lg active:scale-95 transition-all">SİSTEME GİR</button>
         </div>
     </div>
@@ -71,15 +69,12 @@
         const SUPABASE_KEY = 'sb_publishable_2lmWYp5Pkvn_BsADVHPKug_KK9n8v2-';
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        let ref = null, selectedId = null, peer = null, myStream = null;
-        let micOn = false, spkOn = true; // Dinleme varsayılan olarak açık
-        let adminWantsToTalk = false; 
+        let ref = null, selectedId = null, peer = null, myStream = null, micOn = false, spkOn = false;
 
         window.onload = () => { 
             lucide.createIcons();
             const saved = localStorage.getItem('sdu_ref_code');
-            if(saved) { document.getElementById('refCode').value = saved; } 
-            // Giriş yapmak için kullanıcının mutlaka butona basmasını bekliyoruz
+            if(saved) { document.getElementById('refCode').value = saved; login(); } 
         };
 
         async function login() {
@@ -115,30 +110,19 @@
 
         function startGPS() { navigator.geolocation.watchPosition(async (pos) => { await supabaseClient.from('referees').update({last_lat:pos.coords.latitude, last_lng:pos.coords.longitude}).eq('id',ref.id); }, null, {enableHighAccuracy: true}); }
 
-        // --- BROADCAST (DATA CHANNEL) SES SİSTEMİ ---
         async function startVoice() {
             if (peer) peer.destroy();
             peer = new Peer('SDU_REF_' + ref.id.substring(0,8));
             
             peer.on('open', async () => {
-                // Admin'e Data kanalı üzerinden "beni yönet" diyoruz
-                const dataConn = peer.connect('SDU_ADMIN_2026_VOICE');
-                dataConn.on('data', (data) => {
-                    if (data.type === 'AUDIO_STATE') {
-                        adminWantsToTalk = data.listen;
-                        updateAudioPlayback();
-                    }
-                });
-
                 try {
-                    myStream = await navigator.mediaDevices.getUserMedia({audio:true});
+                    myStream = await navigator.mediaDevices.getUserMedia({ audio: true });
                     myStream.getAudioTracks()[0].enabled = micOn;
                     const call = peer.call('SDU_ADMIN_2026_VOICE', myStream);
                     
                     call.on('stream', (rs) => { 
                         const ra = document.getElementById('remoteAudio');
-                        ra.srcObject = rs; 
-                        updateAudioPlayback();
+                        ra.srcObject = rs; ra.muted = !spkOn;
                     });
                 } catch(e) { console.error("Mic access denied"); }
             });
@@ -146,12 +130,8 @@
             peer.on('disconnected', () => peer.reconnect());
         }
 
-        function updateAudioPlayback() {
-            document.getElementById('remoteAudio').muted = !(adminWantsToTalk && spkOn);
-        }
-
         function toggleMic() { if(!myStream) return; micOn = !micOn; myStream.getAudioTracks()[0].enabled = micOn; upUI(); }
-        function toggleSpk() { spkOn = !spkOn; updateAudioPlayback(); upUI(); }
+        function toggleSpk() { spkOn = !spkOn; document.getElementById('remoteAudio').muted = !spkOn; upUI(); }
         
         function upUI() {
             document.getElementById('micBtn').className = micOn ? "p-5 glass rounded-[1.5rem] border-2 border-red-500 mic-on shadow-lg" : "p-5 glass rounded-[1.5rem] border-2 border-white/10";
