@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Hakem | SDÜ Oryantiring</title>
+    <title>Hakem Sahası | SDÜ Oryantiring</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -71,6 +71,7 @@
 
         let ref = null, selectedId = null, peer = null, myStream = null, micOn = false, spkOn = false;
         let callRetryTimeout = null;
+        let adminDataConn = null;
 
         window.onload = () => { 
             lucide.createIcons();
@@ -111,7 +112,6 @@
 
         function startGPS() { navigator.geolocation.watchPosition(async (pos) => { await supabaseClient.from('referees').update({last_lat:pos.coords.latitude, last_lng:pos.coords.longitude}).eq('id',ref.id); }, null, {enableHighAccuracy: true}); }
 
-        // --- OTO-ŞİFA ÖZELLİKLİ SES SİSTEMİ ---
         async function startVoice() {
             if (peer) { peer.disconnect(); peer.destroy(); }
             peer = new Peer('SDU_REF_' + ref.id.substring(0,8), {
@@ -119,6 +119,7 @@
             });
             
             peer.on('open', async () => {
+                adminDataConn = peer.connect('SDU_ADMIN_2026_VOICE');
                 try {
                     myStream = await navigator.mediaDevices.getUserMedia({ audio: true });
                     myStream.getAudioTracks()[0].enabled = micOn;
@@ -149,18 +150,25 @@
                 callRetryTimeout = setTimeout(makeCall, 3000);
             });
 
-            // 5-10 dk Timeout Koruyucu: WebRTC koptuğunda sessizce yeniden arar
             if(call.peerConnection) {
                 call.peerConnection.addEventListener('iceconnectionstatechange', () => {
                     const state = call.peerConnection.iceConnectionState;
                     if(state === 'disconnected' || state === 'failed' || state === 'closed') {
-                        call.close(); // Close tetiklenir, 3sn sonra tekrar arar
+                        call.close();
                     }
                 });
             }
         }
 
-        function toggleMic() { if(!myStream) return; micOn = !micOn; myStream.getAudioTracks()[0].enabled = micOn; upUI(); }
+        function toggleMic() { 
+            if(!myStream) return; 
+            micOn = !micOn; 
+            myStream.getAudioTracks()[0].enabled = micOn; 
+            upUI(); 
+            if(adminDataConn && adminDataConn.open) {
+                adminDataConn.send({ type: 'MIC_STATUS', state: micOn });
+            }
+        }
         function toggleSpk() { spkOn = !spkOn; document.getElementById('remoteAudio').muted = !spkOn; upUI(); }
         
         function upUI() {
