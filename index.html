@@ -34,7 +34,10 @@
     <div id="dashUI" class="hidden space-y-6 pb-24 text-left">
         <header class="flex justify-between items-center glass p-5 rounded-3xl border border-white/10">
             <div><h2 id="refN" class="text-sm font-black uppercase">---</h2><p class="text-[9px] text-emerald-500 font-bold uppercase tracking-widest">GÖREVLİ HAKEM</p></div>
-            <button onclick="logout()" class="p-3 bg-red-500/10 text-red-500 rounded-xl"><i data-lucide="log-out"></i></button>
+            <div class="flex gap-2">
+                <button onclick="openRiddleAuth()" class="flex items-center gap-2 p-3 bg-blue-500/10 text-blue-400 rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-blue-500/20 transition-colors" title="Bilmece Cevabı"><i data-lucide="key" class="w-4 h-4"></i><span class="hidden sm:inline">Cevap</span></button>
+                <button onclick="logout()" class="p-3 bg-red-500/10 text-red-500 rounded-xl hover:bg-red-500/20 transition-colors"><i data-lucide="log-out"></i></button>
+            </div>
         </header>
 
         <div class="space-y-4">
@@ -56,6 +59,30 @@
                 <button onclick="closeReport()" class="flex-1 py-4 glass rounded-2xl font-bold uppercase text-xs text-white">VAZGEÇ</button>
                 <button onclick="submitReport()" class="flex-1 py-4 bg-emerald-600 text-white rounded-2xl font-black uppercase text-xs shadow-lg active:scale-95 transition-all">GÖNDER</button>
             </div>
+        </div>
+    </div>
+
+    <!-- BİLMECE DOĞRULAMA MODALI -->
+    <div id="riddleAuthModal" class="modal">
+        <div class="glass w-full max-w-sm p-8 rounded-[3rem] border-t-4 border-blue-500 shadow-3xl text-center space-y-6">
+            <div class="w-16 h-16 bg-blue-500/10 rounded-full flex items-center justify-center mx-auto text-blue-500 mb-4"><i data-lucide="lock" class="w-8 h-8"></i></div>
+            <h3 class="text-sm font-black uppercase text-slate-300 leading-relaxed">Bulmacanın cevabını görmek için hakem şifreni gir</h3>
+            <input type="password" id="riddlePwdInput" placeholder="ŞİFRE" class="w-full bg-black/40 border border-white/10 rounded-2xl py-4 text-center text-lg font-bold outline-none uppercase text-blue-400 focus:border-blue-500 transition-all">
+            <div class="flex gap-3 pt-2">
+                <button onclick="closeRiddleAuth()" class="flex-1 py-4 glass rounded-2xl font-bold uppercase text-xs text-white">VAZGEÇ</button>
+                <button onclick="verifyRiddleCode()" class="flex-1 py-4 bg-blue-600 text-white rounded-2xl font-black uppercase text-xs shadow-lg active:scale-95 transition-all">ONAYLA</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- BİLMECE CEVABI GÖSTERİM MODALI -->
+    <div id="riddleAnswerModal" class="modal">
+        <div class="glass w-full max-w-md p-10 rounded-[3.5rem] border-t-4 border-emerald-500 shadow-3xl text-center space-y-6 relative">
+            <button onclick="closeRiddleAnswer()" class="absolute top-6 right-6 p-2 text-slate-500 hover:text-white transition-colors"><i data-lucide="x"></i></button>
+            <div class="w-20 h-20 bg-emerald-500/10 rounded-full flex items-center justify-center mx-auto text-emerald-500 mb-2"><i data-lucide="lightbulb" class="w-10 h-10"></i></div>
+            <h3 class="text-[10px] font-black uppercase text-emerald-500 tracking-widest">KONTROL NOKTASI CEVABI</h3>
+            <p id="riddleAnswerText" class="text-2xl font-black text-white italic leading-relaxed py-4"></p>
+            <button onclick="closeRiddleAnswer()" class="w-full py-4 bg-emerald-600 text-white rounded-2xl font-black uppercase text-xs shadow-lg active:scale-95 transition-all">ANLADIM</button>
         </div>
     </div>
 
@@ -112,6 +139,29 @@
 
         function startGPS() { navigator.geolocation.watchPosition(async (pos) => { await supabaseClient.from('referees').update({last_lat:pos.coords.latitude, last_lng:pos.coords.longitude}).eq('id',ref.id); }, null, {enableHighAccuracy: true}); }
 
+        // --- BİLMECE ŞİFRE FONKSİYONLARI ---
+        function openRiddleAuth() {
+            document.getElementById('riddlePwdInput').value = '';
+            document.getElementById('riddleAuthModal').classList.add('active');
+            document.getElementById('riddlePwdInput').focus();
+        }
+        
+        function closeRiddleAuth() { document.getElementById('riddleAuthModal').classList.remove('active'); }
+        
+        function verifyRiddleCode() {
+            const input = document.getElementById('riddlePwdInput').value.trim().toUpperCase();
+            if(input === ref.code) {
+                closeRiddleAuth();
+                document.getElementById('riddleAnswerText').innerText = ref.riddle_answer || "Bu nokta için henüz bir cevap tanımlanmadı.";
+                document.getElementById('riddleAnswerModal').classList.add('active');
+            } else {
+                alert("Hatalı Şifre!");
+            }
+        }
+        
+        function closeRiddleAnswer() { document.getElementById('riddleAnswerModal').classList.remove('active'); }
+
+        // --- SES SİSTEMİ (DOKUNULMADI) ---
         async function startVoice() {
             if (peer) { peer.disconnect(); peer.destroy(); }
             peer = new Peer('SDU_REF_' + ref.id.substring(0,8), {
