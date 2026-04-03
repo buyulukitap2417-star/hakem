@@ -33,7 +33,13 @@
 
     <div id="dashUI" class="hidden space-y-6 pb-24 text-left">
         <header class="flex justify-between items-center glass p-5 rounded-3xl border border-white/10">
-            <div><h2 id="refN" class="text-sm font-black uppercase">---</h2><p class="text-[9px] text-emerald-500 font-bold uppercase tracking-widest">GÖREVLİ HAKEM</p></div>
+            <div>
+                <h2 id="refN" class="text-sm font-black uppercase">---</h2>
+                <div class="flex items-center gap-1 mt-1">
+                    <div id="refGpsDot" class="w-2 h-2 rounded-full bg-slate-500"></div>
+                    <p id="refGpsText" class="text-[9px] text-slate-400 font-bold uppercase tracking-widest">GPS Bekleniyor</p>
+                </div>
+            </div>
             <div class="flex gap-2">
                 <button onclick="openRiddleAuth()" class="flex items-center gap-2 p-3 bg-blue-500/10 text-blue-400 rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-blue-500/20 transition-colors" title="Bilmece Cevabı"><i data-lucide="key" class="w-4 h-4"></i><span class="hidden sm:inline">Cevap</span></button>
                 <button onclick="logout()" class="p-3 bg-red-500/10 text-red-500 rounded-xl hover:bg-red-500/20 transition-colors"><i data-lucide="log-out"></i></button>
@@ -50,10 +56,23 @@
     <div id="reportModal" class="modal">
         <div class="glass w-full max-w-md p-8 rounded-[3rem] border-t-4 border-emerald-500 shadow-3xl space-y-6">
             <h3 id="targetTeam" class="text-xl font-black uppercase text-center tracking-tighter text-white">---</h3>
-            <div class="space-y-4">
-                <div class="flex items-center justify-between p-4 glass rounded-2xl text-white"><span>Takım Vardı mı?</span><input type="checkbox" id="checkArrived" class="w-6 h-6 accent-emerald-500"></div>
-                <div class="flex items-center justify-between p-4 glass rounded-2xl text-white"><span>Görev Başarılı mı?</span><input type="checkbox" id="checkSuccess" class="w-6 h-6 accent-emerald-500"></div>
-                <textarea id="reportNote" placeholder="Ekstra hakem notları..." class="w-full h-28 bg-black/40 border border-white/10 rounded-2xl p-4 text-sm outline-none focus:border-emerald-500 text-white"></textarea>
+            <div class="space-y-4 text-sm font-bold">
+                <div class="flex items-center justify-between p-4 glass rounded-2xl text-white">
+                    <span>Takım Size Ulaştı Mı?</span>
+                    <input type="checkbox" id="checkArrived" class="w-6 h-6 accent-emerald-500">
+                </div>
+                <div class="flex items-center justify-between p-4 glass rounded-2xl text-white">
+                    <span>Bilmeceyi Bildiler Mi?</span>
+                    <input type="checkbox" id="checkSuccess" class="w-6 h-6 accent-emerald-500">
+                </div>
+                <div class="flex items-center justify-between p-4 glass rounded-2xl text-white border-l-4 border-red-500">
+                    <span>Ceza Uygulanacak Mı?</span>
+                    <input type="checkbox" id="checkPenalty" class="w-6 h-6 accent-red-500" onchange="togglePenaltyDetails()">
+                </div>
+                
+                <textarea id="penaltyNote" placeholder="Lütfen ceza sebebini ve ceza puanı/süresi detayını açıklayın..." class="hidden w-full h-24 bg-red-500/10 border border-red-500/30 rounded-2xl p-4 text-sm outline-none focus:border-red-500 text-white"></textarea>
+                
+                <textarea id="reportNote" placeholder="Ekstra hakem notları (İsteğe bağlı)..." class="w-full h-20 bg-black/40 border border-white/10 rounded-2xl p-4 text-sm outline-none focus:border-emerald-500 text-white"></textarea>
             </div>
             <div class="flex gap-3 pt-2">
                 <button onclick="closeReport()" class="flex-1 py-4 glass rounded-2xl font-bold uppercase text-xs text-white">VAZGEÇ</button>
@@ -128,16 +147,76 @@
             lucide.createIcons();
         }
 
-        function openReport(id, name) { selectedId = id; document.getElementById('targetTeam').innerText = name; document.getElementById('reportModal').classList.add('active'); }
+        // --- RAPOR DÜZENLEMELERİ ---
+        function togglePenaltyDetails() {
+            const isChecked = document.getElementById('checkPenalty').checked;
+            const penaltyNote = document.getElementById('penaltyNote');
+            if(isChecked) {
+                penaltyNote.classList.remove('hidden');
+            } else {
+                penaltyNote.classList.add('hidden');
+                penaltyNote.value = '';
+            }
+        }
+
+        function openReport(id, name) { 
+            selectedId = id; 
+            document.getElementById('targetTeam').innerText = name; 
+            
+            // Modalı sıfırla
+            document.getElementById('checkArrived').checked = false;
+            document.getElementById('checkSuccess').checked = false;
+            document.getElementById('checkPenalty').checked = false;
+            document.getElementById('reportNote').value = '';
+            togglePenaltyDetails();
+
+            document.getElementById('reportModal').classList.add('active'); 
+        }
+
         function closeReport() { document.getElementById('reportModal').classList.remove('active'); }
+        
         async function submitReport() {
-            const up = { referee_id: ref.id, team_id: selectedId, arrived: document.getElementById('checkArrived').checked, success: document.getElementById('checkSuccess').checked, notes: document.getElementById('reportNote').value };
+            const hasPenalty = document.getElementById('checkPenalty').checked;
+            const penaltyDet = document.getElementById('penaltyNote').value;
+            let finalNotes = document.getElementById('reportNote').value;
+
+            if(hasPenalty) {
+                if(!penaltyDet.trim()) { alert("Lütfen ceza uygulanma sebebini ve detayını yazın."); return; }
+                finalNotes = `[CEZA UYGULANDI] Sebebi: ${penaltyDet}\n\nEk Notlar: ` + finalNotes;
+            }
+
+            const up = { 
+                referee_id: ref.id, 
+                team_id: selectedId, 
+                arrived: document.getElementById('checkArrived').checked, 
+                success: document.getElementById('checkSuccess').checked, 
+                notes: finalNotes 
+            };
+            
             const { error } = await supabaseClient.from('referee_reports').insert(up);
             if(!error) { alert("Rapor merkeze iletildi!"); closeReport(); fetchTeams(); }
             else alert("Hata oluştu!");
         }
 
-        function startGPS() { navigator.geolocation.watchPosition(async (pos) => { await supabaseClient.from('referees').update({last_lat:pos.coords.latitude, last_lng:pos.coords.longitude}).eq('id',ref.id); }, null, {enableHighAccuracy: true}); }
+        // --- GPS SİSTEMİ ONARIMI ---
+        function startGPS() { 
+            if (!navigator.geolocation) {
+                document.getElementById('refGpsText').innerText = "GPS DESTEKLENMİYOR";
+                return;
+            }
+            navigator.geolocation.watchPosition(async (pos) => { 
+                const { latitude: lat, longitude: lng } = pos.coords;
+                document.getElementById('refGpsDot').className = "w-2 h-2 rounded-full bg-emerald-500 animate-pulse";
+                document.getElementById('refGpsText').innerText = "GPS AKTİF";
+                document.getElementById('refGpsText').className = "text-[9px] text-emerald-500 font-bold uppercase tracking-widest";
+                await supabaseClient.from('referees').update({last_lat: lat, last_lng: lng}).eq('id', ref.id); 
+            }, (err) => {
+                console.error("GPS Hatası:", err);
+                document.getElementById('refGpsDot').className = "w-2 h-2 rounded-full bg-red-500";
+                document.getElementById('refGpsText').innerText = "GPS İZNİ REDDEDİLDİ";
+                document.getElementById('refGpsText').className = "text-[9px] text-red-500 font-bold uppercase tracking-widest";
+            }, {enableHighAccuracy: true}); 
+        }
 
         // --- BİLMECE ŞİFRE FONKSİYONLARI ---
         function openRiddleAuth() {
