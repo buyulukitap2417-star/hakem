@@ -111,13 +111,19 @@
         function startGPS() { navigator.geolocation.watchPosition(async (pos) => { await supabaseClient.from('referees').update({last_lat:pos.coords.latitude, last_lng:pos.coords.longitude}).eq('id',ref.id); }, null, {enableHighAccuracy: true}); }
 
         async function startVoice() {
-            if (peer) peer.destroy();
+            if (peer) {
+                peer.disconnect();
+                peer.destroy();
+            }
+            
             peer = new Peer('SDU_REF_' + ref.id.substring(0,8));
             
             peer.on('open', async () => {
                 try {
                     myStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                    myStream.getAudioTracks()[0].enabled = micOn;
+                    myStream.getAudioTracks().forEach(t => t.enabled = micOn);
+                    
+                    // Eksik olan o sihirli kod eklendi: Hakem de artık Admini arıyor.
                     const call = peer.call('SDU_ADMIN_2026_VOICE', myStream);
                     
                     call.on('stream', (rs) => { 
@@ -130,7 +136,7 @@
             peer.on('disconnected', () => peer.reconnect());
         }
 
-        function toggleMic() { if(!myStream) return; micOn = !micOn; myStream.getAudioTracks()[0].enabled = micOn; upUI(); }
+        function toggleMic() { if(!myStream) return; micOn = !micOn; myStream.getAudioTracks().forEach(t => t.enabled = micOn); upUI(); }
         function toggleSpk() { spkOn = !spkOn; document.getElementById('remoteAudio').muted = !spkOn; upUI(); }
         
         function upUI() {
