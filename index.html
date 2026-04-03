@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Hakem Sahası | SDÜ Oryantiring</title>
+    <title>Hakem | SDÜ Oryantiring</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -70,6 +70,7 @@
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         let ref = null, selectedId = null, peer = null, myStream = null, micOn = false, spkOn = false;
+        let callRetryTimeout = null;
 
         window.onload = () => { 
             lucide.createIcons();
@@ -110,33 +111,56 @@
 
         function startGPS() { navigator.geolocation.watchPosition(async (pos) => { await supabaseClient.from('referees').update({last_lat:pos.coords.latitude, last_lng:pos.coords.longitude}).eq('id',ref.id); }, null, {enableHighAccuracy: true}); }
 
+        // --- OTO-ŞİFA ÖZELLİKLİ SES SİSTEMİ ---
         async function startVoice() {
-            if (peer) {
-                peer.disconnect();
-                peer.destroy();
-            }
-            
-            peer = new Peer('SDU_REF_' + ref.id.substring(0,8));
+            if (peer) { peer.disconnect(); peer.destroy(); }
+            peer = new Peer('SDU_REF_' + ref.id.substring(0,8), {
+                config: { 'iceServers': [{ 'urls': 'stun:stun.l.google.com:19302' }] }
+            });
             
             peer.on('open', async () => {
                 try {
                     myStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                    myStream.getAudioTracks().forEach(t => t.enabled = micOn);
-                    
-                    // Eksik olan o sihirli kod eklendi: Hakem de artık Admini arıyor.
-                    const call = peer.call('SDU_ADMIN_2026_VOICE', myStream);
-                    
-                    call.on('stream', (rs) => { 
-                        const ra = document.getElementById('remoteAudio');
-                        ra.srcObject = rs; ra.muted = !spkOn;
-                    });
+                    myStream.getAudioTracks()[0].enabled = micOn;
+                    makeCall();
                 } catch(e) { console.error("Mic access denied"); }
             });
 
-            peer.on('disconnected', () => peer.reconnect());
+            peer.on('disconnected', () => { if(!peer.destroyed) peer.reconnect(); });
         }
 
-        function toggleMic() { if(!myStream) return; micOn = !micOn; myStream.getAudioTracks().forEach(t => t.enabled = micOn); upUI(); }
+        function makeCall() {
+            if (!myStream || !peer || !peer.open) return;
+            const call = peer.call('SDU_ADMIN_2026_VOICE', myStream);
+            if(!call) return;
+
+            call.on('stream', (rs) => { 
+                const ra = document.getElementById('remoteAudio');
+                ra.srcObject = rs; ra.muted = !spkOn;
+            });
+
+            call.on('close', () => {
+                clearTimeout(callRetryTimeout);
+                callRetryTimeout = setTimeout(makeCall, 3000);
+            });
+            
+            call.on('error', () => {
+                clearTimeout(callRetryTimeout);
+                callRetryTimeout = setTimeout(makeCall, 3000);
+            });
+
+            // 5-10 dk Timeout Koruyucu: WebRTC koptuğunda sessizce yeniden arar
+            if(call.peerConnection) {
+                call.peerConnection.addEventListener('iceconnectionstatechange', () => {
+                    const state = call.peerConnection.iceConnectionState;
+                    if(state === 'disconnected' || state === 'failed' || state === 'closed') {
+                        call.close(); // Close tetiklenir, 3sn sonra tekrar arar
+                    }
+                });
+            }
+        }
+
+        function toggleMic() { if(!myStream) return; micOn = !micOn; myStream.getAudioTracks()[0].enabled = micOn; upUI(); }
         function toggleSpk() { spkOn = !spkOn; document.getElementById('remoteAudio').muted = !spkOn; upUI(); }
         
         function upUI() {
